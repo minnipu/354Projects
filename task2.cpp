@@ -30,7 +30,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
 //=========================================================//
+
+
+struct Point{
+	float x,y,z;
+};
+
+vector<Point> positions;
+
 //=========================================================//
 // person position in the environment
 void move_camera(int specialKey,char normalKey);
@@ -48,6 +62,10 @@ const float DEFAULT_SPEED   = 0.4f;
 //Snowflake variables
 GLfloat height = 10;
 GLfloat fallSpeed = .05;
+int		MaxWidth = 60;
+int 	numSnowflakes = 1000;
+float	snowFlakeScale = .1f;
+
 //=========================================================//
 //=========================================================//
 GLvoid  DrawGround();
@@ -296,12 +314,10 @@ GLvoid DrawTrees(){
 }
 
 GLvoid DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz){
-	float snowFlakeScale = .2f;
-
 	glEnable(GL_BLEND);     // Turn Blending On
 		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		  glPushMatrix();
-			glTranslatef(dx,height,dz); 		//position snowflake
+			glTranslatef(dx,dy,dz); 		//position snowflake
 			glScalef(snowFlakeScale, snowFlakeScale, snowFlakeScale);
 			glColor4f(.8f, .79f, .79f, .3);
 			gluSphere(g_normalObject, 1,4,4);
@@ -311,17 +327,18 @@ GLvoid DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz){
 }
 
 GLvoid SnowflakeEmmitter(){
-	//do ONCE:
-	//	create empty position vector (Size: 1000)
-	//	fill empty positions with random positions
-	//		between +/- 20 x/y
-
 	//draw each snowflake from vector
 	glPushMatrix();
 		//position center of snow flake emmitter
 		glTranslatef(0,0,-5);
 
 		DrawSnowflake(0,0,0);
+		Point p;
+		for(int i = 0; i < positions.size(); i++){
+			p = positions.at(i);
+			DrawSnowflake(p.x,p.y,p.z);
+		}
+
 
 	glPopMatrix();
 }
@@ -376,9 +393,23 @@ static void display(void)
 	////////////////////////////////////////////
 
 	//Update height for each snowflake (TODO)
-	height = height - fallSpeed;
-	//reuse snowflake, reset height and randomize position(TODO)
-	if (height <= 0) height = 10;
+  for(int i = 0; i < numSnowflakes; i++){
+	if(positions[i].y <= 0){
+		positions[i].y = 20;
+		//reset position
+		positions[i].x = (rand() % MaxWidth) -(MaxWidth/2);
+		positions[i].z = (rand() % MaxWidth) -(MaxWidth/2);
+		positions[i].x += (rand() % 1000 - 500)/1000.0;
+		positions[i].z += (rand() % 1000 - 500)/1000.0;
+	} else{
+		positions[i].y = positions[i].y - fallSpeed;
+	}
+
+	positions[i].x += (rand() % 100 - 50)/10000.0;
+	positions[i].z += (rand() % 100 - 50)/10000.0;
+
+  }
+
 
 	////////////////////////////////////////////
 	//				END SNOW Updates
@@ -564,6 +595,20 @@ void init_dados(void)
   g_flatshadedObject = gluNewQuadric();
   gluQuadricNormals(g_flatshadedObject, GLU_FLAT);
 
+  Point p;
+  //create vector of random points
+  for(int i = 0; i < numSnowflakes; i++){
+	p.x = (rand() % MaxWidth) -(MaxWidth/2);
+    p.y = (rand() % MaxWidth);
+    p.z = (rand() % MaxWidth) -(MaxWidth/2);
+	p.x += (rand() % 1000 - 500)/1000.0;
+	p.y += (rand() % 1000 - 500)/1000.0;
+	p.z += (rand() % 1000 - 500)/1000.0;
+ 
+    positions.push_back(p);        
+	cout << "point " << i << ": " << p.x << "," << p.y << "," << p.z << endl;
+  }
+
 }
 //=========================================================//
 //=========================================================//
@@ -608,6 +653,13 @@ int main(int argc, char *argv[])
     glutMainLoop();
     cleanUP_data();
 
+	Point p;
+	for(int i = 0; i < 100; i++){
+	  p = positions.at(i);
+	  cout << "point " << i << ": " << p.x << "," << p.y << "," << p.z << endl;
+	}
+
+	cout << "hello" << endl;
     return EXIT_SUCCESS;
 }
 //=========================================================//
