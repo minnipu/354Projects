@@ -36,10 +36,6 @@
 void move_camera(int specialKey,char normalKey);
 void update_camera();
 
-//functions
-
-
-
 GLdouble  g_playerPos[] = { 0, 1, 15.0 };//{ 0.0, 0.5, 10.0 };
 GLdouble  g_lookAt[] = { 0.0, 0.0, 0.0 };
 GLfloat   g_viewAngle = -90.0;
@@ -55,8 +51,8 @@ GLfloat fallSpeed = .05;
 //=========================================================//
 //=========================================================//
 GLvoid  DrawGround();
-GLvoid  DrawGun();
-GLvoid  drawSensor();
+
+//New functions
 GLvoid  DrawTrees();
 GLvoid  DrawTree(GLfloat dx, GLfloat dy, GLfloat dz);
 GLvoid  DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz);
@@ -222,107 +218,6 @@ GLvoid drawCollision()
 }
 //=========================================================//
 
-GLvoid  DrawGun(){
-	GLfloat alphaTransparency = 1.0;
-
-    glEnable(GL_BLEND);     // Turn Blending On
-    glDisable(GL_DEPTH_TEST);   // Turn Depth Testing Off
-	   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		  glPushMatrix();
-			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, rand() % 128);
-			glColor4f(1.0f,1.0f,0.0f,alphaTransparency);
-			glTranslatef(1, 1, 1);
-			gluSphere(g_normalObject, 1.0,4,4);
-		  glPopMatrix();
-	glDisable(GL_BLEND);        // Turn Blending Off
-	glEnable(GL_DEPTH_TEST);    // Turn Depth Testing On
-
-}
-
-
-//This function creates the sensor that is used for collision
-//
-GLvoid drawSensor(bool isTransparent){
-	float radius = .4f;
-	GLfloat alphaTransparency = 0.5;
-
-	if(isTransparent) alphaTransparency = 0.0;
-
-    glEnable(GL_BLEND);     // Turn Blending On
-    glDisable(GL_DEPTH_TEST);   // Turn Depth Testing Off
-	   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		  // first sphere collides against the other
-		  glPushMatrix();
-			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, rand() % 128);
-			glColor4f(1.0f,1.0f,0.0f,alphaTransparency);
-			glTranslatef(1, 1, 1);
-			gluSphere(g_normalObject, radius, 16, 10);
-		  glPopMatrix();
-	glDisable(GL_BLEND);        // Turn Blending Off
-	glEnable(GL_DEPTH_TEST);    // Turn Depth Testing On
-
-}
-
-//Draws light relative to poisition of the camera
-GLvoid drawLight(int dx, int dy, int dz){
-	float radius = .5f;
-	GLfloat alphaTransparency = 0.5;
-
-    glEnable(GL_BLEND);     // Turn Blending On
-    glDisable(GL_DEPTH_TEST);   // Turn Depth Testing Off
-	   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		  // first sphere collides against the other
-		  glPushMatrix();
-			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, rand() % 128);
-			glColor4f(1.0f,1.0f,0.0f,alphaTransparency);
-			glTranslatef(dx,dy,dz);
-			gluSphere(g_normalObject, radius, 16, 10);
-		  glPopMatrix();
-	glDisable(GL_BLEND);        // Turn Blending Off
-	glEnable(GL_DEPTH_TEST);    // Turn Depth Testing On
-
-}
-
-GLvoid drawRobot(void){
-  srand(300); //randomize srand again
-  glPushAttrib(GL_CURRENT_BIT);  // save the existing color properties
-  glEnable(GL_BLEND);  // enable blending to get anti-aliased lines.
-
-//=========================================================//
-//			START DRAWING ROBOT
-//=========================================================//
-/*
-  glPushMatrix(); //example cylinder
-    glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, rand() % 128);
-    glColor3f(0.3,0.6,0.8);
-    glTranslatef(-150.0, 0.5, 0.0);
-    glRotatef(-90, 1.0, 0.0, 0.0);
-    gluCylinder(g_wireframeObject, 0.0, 0.5, 3.0, 32, 4);
-  glPopMatrix();
-*/
-
-  glPushMatrix();
-    glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, rand() % 128);
-    glColor3f(0.3,0.6,0.8);
-    glTranslatef(1, 1, 0.0);
-    glRotatef(-90, 1.0, 0.0, 0.0);
-    gluCylinder(g_normalObject, 0.0, 0.5, 3.0, 32, 4);
-  glPopMatrix();
-
-	drawSensor(true);
-	drawLight(1, 1, 0);
-	DrawGun();
-//=========================================================//
-//			STOP DRAWING ROBOT
-//=========================================================//
-  glDisable(GL_BLEND);
-
-  // restore previous attributes
-  glPopAttrib();
-
-}
-
-
 //=========================================================//
 GLvoid drawCone(void)
 {   GLfloat alphaTransparency = 0.5;
@@ -443,12 +338,6 @@ GLvoid DrawNormalObjects(GLfloat rotation)
   SnowflakeEmmitter();
 
 
-
-
-//  drawCollision();
-//  drawRobot();
-
-//  drawCone();
 
 //=========================================================//
 //						END Drawing Scene
