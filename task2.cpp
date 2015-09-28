@@ -311,6 +311,12 @@ GLvoid DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz){
 }
 
 GLvoid SnowflakeEmmitter(){
+	//do ONCE:
+	//	create empty position vector (Size: 1000)
+	//	fill empty positions with random positions
+	//		between +/- 20 x/y
+
+	//draw each snowflake from vector
 	glPushMatrix();
 		//position center of snow flake emmitter
 		glTranslatef(0,0,-5);
@@ -365,14 +371,19 @@ static void display(void)
     // it's increased by one every frame
     rotation += 1.0;
 
-	//snowflake
-	//fall
-		height = height - fallSpeed;
+	////////////////////////////////////////////
+	//				SNOW Updates
+	////////////////////////////////////////////
 
-	//reset height, move to new position
-		if (height <= 0) height = 10;
-	//end snowflake
-	//time += 1.0;
+	//Update height for each snowflake (TODO)
+	height = height - fallSpeed;
+	//reuse snowflake, reset height and randomize position(TODO)
+	if (height <= 0) height = 10;
+
+	////////////////////////////////////////////
+	//				END SNOW Updates
+	////////////////////////////////////////////
+
     // and ranges between 0 and 360
     if (rotation > 360.0)
     rotation = 0.0;
