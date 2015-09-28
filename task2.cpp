@@ -296,13 +296,14 @@ GLvoid DrawTrees(){
 }
 
 GLvoid DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz){
+	float snowFlakeScale = .2f;
+
 	glEnable(GL_BLEND);     // Turn Blending On
 		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		  glPushMatrix();
-			//position snowflake
-			glTranslatef(dx,height,dz);
+			glTranslatef(dx,height,dz); 		//position snowflake
+			glScalef(snowFlakeScale, snowFlakeScale, snowFlakeScale);
 			glColor4f(.8f, .79f, .79f, .3);
-
 			gluSphere(g_normalObject, 1,4,4);
 
 		  glPopMatrix();
