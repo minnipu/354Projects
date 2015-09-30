@@ -1,7 +1,11 @@
 
 
 //=========================================================//
+#include <GL/glut.h>
+#include <GL/glu.h>
+#include <GL/gl.h>
 //=========================================================//
+#include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +14,7 @@
 #include <stdlib.h>
 #include "iostream"
 #include <math.h>
+
 //=========================================================//
 //=========================================================//
 // person position in the environment
@@ -88,7 +93,7 @@ static void text_onScreen(int row, int col, const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	(void)vsprintf_s(buf, fmt, args);
+	//(void)vsprintf_s(buf, fmt, args);
 	va_end(args);
 
 	glGetIntegerv(GL_VIEWPORT, viewport);

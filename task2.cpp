@@ -44,6 +44,7 @@ struct Point{
 };
 
 vector<Point> positions;
+vector<Point> TreePos;
 
 //=========================================================//
 // person position in the environment
@@ -59,22 +60,30 @@ GLfloat   change_collor = 1.0;
 float rad =0;
 const float DEFAULT_SPEED   = 0.4f;
 
-//Snowflake variables
+// variables
 GLfloat height = 10;
-GLfloat fallSpeed = .05;
-int		MaxWidth = 60;
-int 	numSnowflakes = 1000;
+GLfloat fallSpeed = .1;
+int		MaxWidth = 100;
+int 	numSnowflakes = 5000;
 float	snowFlakeScale = .1f;
-
+float rotateBase_degrees=0;
+float rotWheel1 = 0;
+float rotWheel2 = 0;
+float rotWheel3 = 0;
+float windSpeed = 0;
+float windWheelScale = .5f;
+int		numTrees = 500;
 //=========================================================//
 //=========================================================//
 GLvoid  DrawGround();
 
 //New functions
 GLvoid  DrawTrees();
-GLvoid  DrawTree(GLfloat dx, GLfloat dy, GLfloat dz);
+GLvoid  DrawTree(GLfloat dx, GLfloat dy, GLfloat dz, float scale);
 GLvoid  DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz);
-GLvoid  SnowflakeEmmitter();
+GLvoid  SnowflakeEmmitter(GLfloat dx, GLfloat dy, GLfloat dz);
+GLvoid	DrawWindwheel(GLfloat dx, GLfloat dy, GLfloat dz, float scale);
+GLvoid	DrawSnowman(GLfloat x, GLfloat y, GLfloat z);
 
 
 GLvoid  DrawNormalObjects(GLfloat rotation);
@@ -164,9 +173,19 @@ GLvoid DrawGround()
 { // enable blending for anti-aliased lines
   glEnable(GL_BLEND);
 
-  // set the color to a bright blue
-  glColor3f(0.5f, 0.7f, 1.0f);
+  // set the to a bright blue
+//  glColor3f(0.5f, 0.7f, 1.0f);
 
+
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glBegin(GL_QUADS);
+	glVertex3f(-100.0, 0, -100.0);
+	glVertex3f(-100.0, 0, 100.0);
+	glVertex3f(100.0, 0, 100.0);
+	glVertex3f(100.0, 0, -100.0);
+	glEnd();
+
+/*
   // draw the lines
   glBegin(GL_LINES);
     for (int x = -WORLD_SIZE; x < WORLD_SIZE; x += 6)
@@ -181,7 +200,7 @@ GLvoid DrawGround()
       glVertex3i(WORLD_SIZE, 0, z);
     }
   glEnd();
-
+*/
   // turn blending off
   glDisable(GL_BLEND);
 } // end DrawGround()
@@ -257,7 +276,7 @@ GLvoid drawCone(void)
 	glEnable(GL_DEPTH_TEST);    // Turn Depth Testing On
 }
 //=========================================================//
-GLvoid DrawTree(GLfloat dx, GLfloat dy, GLfloat dz){
+GLvoid DrawTree(GLfloat dx, GLfloat dy, GLfloat dz, float scale){
 	int trunkScale = 2;
 
 	glEnable(GL_BLEND);     // Turn Blending On
@@ -266,6 +285,7 @@ GLvoid DrawTree(GLfloat dx, GLfloat dy, GLfloat dz){
 			//position the tree
 			glTranslatef(dx, dy, dz);
 
+			glScalef(scale,scale,scale);
 			//tree base
 			glPushMatrix();
 				glTranslatef(0,0.5/trunkScale,0);
@@ -303,14 +323,22 @@ GLvoid DrawTree(GLfloat dx, GLfloat dy, GLfloat dz){
 GLvoid DrawTrees(){
 
 	//foreground trees
-	DrawTree(1.0f,0.0f,0.0f);
-	DrawTree(1.0f,0.0f,5.0f);
+	DrawTree(-4.0f,0.0f,-2.0f, 1);
+	DrawTree(7.0f,0.0f,3.0f, 1.2);
 
 
 	//background trees
-	DrawTree(-6.0f,0.0f,0.0f);
-	DrawTree(-1.0f,0.0f,4.0f);
-	DrawTree(0.0f,0.0f,-12.0f);
+	DrawTree(-6.0f,0.0f,0.0f, .8);
+	DrawTree(4.0f,0.0f,-4.0f, .9);
+
+	Point p;
+	for(int i = 0; i < TreePos.size(); i++){
+		p = TreePos.at(i);
+
+		DrawTree(p.x,p.y,p.z,1 + (rand() % 1000 - 500)/1000.0);
+//		DrawTree(p.x,p.y,p.z,1);
+	}
+
 }
 
 GLvoid DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz){
@@ -319,28 +347,194 @@ GLvoid DrawSnowflake(GLfloat dx, GLfloat dy, GLfloat dz){
 		  glPushMatrix();
 			glTranslatef(dx,dy,dz); 		//position snowflake
 			glScalef(snowFlakeScale, snowFlakeScale, snowFlakeScale);
-			glColor4f(.8f, .79f, .79f, .3);
+			glColor4f(1, 1, 1, 1);
 			gluSphere(g_normalObject, 1,4,4);
 
 		  glPopMatrix();
 	glDisable(GL_BLEND);        // Turn Blending Off
 }
 
-GLvoid SnowflakeEmmitter(){
+GLvoid SnowflakeEmmitter(GLfloat dx, GLfloat dy, GLfloat dz){
 	//draw each snowflake from vector
 	glPushMatrix();
 		//position center of snow flake emmitter
-		glTranslatef(0,0,-5);
+		glTranslatef(dx,dy,dz);
 
-		DrawSnowflake(0,0,0);
 		Point p;
 		for(int i = 0; i < positions.size(); i++){
 			p = positions.at(i);
 			DrawSnowflake(p.x,p.y,p.z);
 		}
 
-
 	glPopMatrix();
+}
+
+GLvoid DrawSnowman(GLfloat x, GLfloat y, GLfloat z)
+{
+	glPushMatrix();
+	glTranslatef(x, y, z);
+	glRotatef(-90, 1.0f, 0.0f, 0.0f);
+	// Draw body (a 20x20 spherical mesh of radius 0.75 at height 0.75)
+	glColor3f(1.0, 1.0, 1.0); // set drawing color to white
+	glPushMatrix();
+	glTranslatef(0.0, 0.0, 0.75);
+	glutSolidSphere(0.75, 20, 20);
+	glPopMatrix();
+
+	// Draw the head (a sphere of radius 0.25 at height 1.75)
+	glPushMatrix();
+	glTranslatef(0.0, 0.0, 1.75); // position head
+	glutSolidSphere(0.25, 20, 20); // head sphere
+
+								   // Draw Eyes (two small black spheres)
+	glColor3f(0.0, 0.0, 0.0); // eyes are black
+	glPushMatrix();
+	glTranslatef(0.0, -0.18, 0.10); // lift eyes to final position
+	glPushMatrix();
+	glTranslatef(-0.05, 0.0, 0.0);
+	glutSolidSphere(0.05, 10, 10); // right eye
+	glPopMatrix();
+	glPushMatrix();
+	glTranslatef(+0.05, 0.0, 0.0);
+	glutSolidSphere(0.05, 10, 10); // left eye
+	glPopMatrix();
+	glPopMatrix();
+
+
+
+	// Draw Nose (the nose is an orange cone)
+	glColor3f(1.0, 0.5, 0.5); // nose is orange
+	glPushMatrix();
+	glRotatef(90.0, 1.0, 0.0, 0.0); // rotate to point along -y
+	glutSolidCone(0.08, 0.5, 10, 2); // draw cone
+	glPopMatrix();
+	glPopMatrix();
+
+	// Draw a faux shadow beneath snow man (dark green circle)
+	glColor3f(0.0, 0.05, 0.0);
+	glPushMatrix();
+	glTranslatef(0.2, 0.2, 0.005);	// translate to just above ground
+	glScalef(1.0, 1.0, 0.0); // scale sphere into a flat pancake
+	glutSolidSphere(0.75, 20, 20); // shadow same size as body
+	glPopMatrix();
+	glPopMatrix();
+}
+
+GLvoid DrawWindwheel(GLfloat dx, GLfloat dy, GLfloat dz,float scale){
+	glPushMatrix();
+		glTranslatef(dx,dy,dz);
+       glRotatef ((GLfloat) rotateBase_degrees, 0.0, 1.0, 0.0); // rotate
+		glScalef(scale,scale,scale);
+       glTranslatef (0.0, 0, 3);//define central base of rotation
+       glTranslatef (0.0, -0.3, 0.0);//define central base of rotation
+
+		//windwheel base
+       glPushMatrix();
+		    glColor3d(.5,.5,.5);
+			glTranslatef(0,-.75,-3);
+			glScalef(.5,2,.5);
+			glutSolidCube(1);
+       glPopMatrix();
+
+		glTranslatef(0,.2,0); //center of petal
+
+		//windwheels connects to this center post
+		glPushMatrix();
+			glScalef(.1,.1,1);
+			//quad radius, slices, stacks;
+			gluSphere(g_normalObject, 1.0,32,8);
+
+			glTranslatef(0,0,-3);			
+			//quad, base, top, height, slices, stacks
+			gluCylinder(g_normalObject, 1.0, 1.0, 3.0, 32, 4);
+
+			gluSphere(g_normalObject, 1.0,32,8);
+
+		glPopMatrix();
+
+		//wind wheel variables
+		float insetAngle = 15;
+		float twistAngle = -5;
+		int numPetals = 18;
+		float length = 1;
+
+		//WindWheel 1
+		glPushMatrix();
+		    glColor3d(0,1,1);
+			glTranslatef(0,0,1);
+
+			//rotate all petals
+	    	glRotatef ((GLfloat) rotWheel1, 0.0, 0.0, 1.0); // rotate
+
+			for(int i = 0; i < numPetals; i++){
+				glPushMatrix();
+					glRotatef(twistAngle, 1,0,0);
+					glRotatef(insetAngle, 0,1,0);
+					glTranslatef(0,length/2,-.2);
+					glScalef(.3,length,.1);
+					gluSphere(g_normalObject,length,6,8);
+//					glutSolidCube(1);
+				glPopMatrix();
+
+				//petal 2
+				glRotatef(360/numPetals, 0, 0, 1);				
+			}
+		glPopMatrix();
+		//end wheel 1
+
+		length = length*1.2;
+		//WindWheel 2
+		glPushMatrix();
+		    glColor3d(1,0,1);
+			glTranslatef(0,0,0);
+
+			//rotate all petals
+	    	glRotatef ((GLfloat) rotWheel2, 0.0, 0.0, 1.0); // rotate
+
+			for(int i = 0; i < numPetals; i++){
+				glPushMatrix();
+					glRotatef(twistAngle, 1,0,0);
+					glRotatef(insetAngle, 0,1,0);
+					glTranslatef(0,length/2,-.2);
+					glScalef(.3,length,.1);
+					gluSphere(g_normalObject,length,6,6);
+					//glutSolidCube(1);
+				glPopMatrix();
+
+				//petal 2
+				glRotatef(360/numPetals, 0, 0, 1);				
+			}
+
+		glPopMatrix();
+		//end Wheel 2
+
+		length = length*1.2;
+		//WindWheel 3
+		glPushMatrix();
+		    glColor3d(1,1,0);
+			glTranslatef(0,0,-1);
+
+			//rotate all petals
+	    	glRotatef ((GLfloat) rotWheel3, 0.0, 0.0, 1.0); // rotate
+
+			for(int i = 0; i < numPetals; i++){
+				glPushMatrix();
+					glRotatef(twistAngle, 1,0,0);
+					glRotatef(insetAngle, 0,1,0);
+					glTranslatef(0,length/2,-.2);
+					glScalef(.3,length,.1);
+					gluSphere(g_normalObject,length,6,6);
+				glPopMatrix();
+				//petal 2
+				glRotatef(360/numPetals, 0, 0, 1);				
+			}
+		glPopMatrix();
+		//end Wheel 3
+	glPopMatrix();
+
+	rotWheel1 = rotWheel1 + windSpeed*6;
+	rotWheel2 = rotWheel2 + windSpeed*4;
+	rotWheel3 = rotWheel3 + windSpeed*2;
 }
 
 
@@ -357,9 +551,12 @@ GLvoid DrawNormalObjects(GLfloat rotation)
 //=========================================================//
 //						START Drawing Scene
 //=========================================================//
+	
 
   DrawTrees();
-  SnowflakeEmmitter();
+  SnowflakeEmmitter(0,0,5);
+  DrawWindwheel(4,2,3,.5);
+  DrawSnowman(0,0,0);
 
 
 
@@ -401,16 +598,22 @@ static void display(void)
 		positions[i].z = (rand() % MaxWidth) -(MaxWidth/2);
 		positions[i].x += (rand() % 1000 - 500)/1000.0;
 		positions[i].z += (rand() % 1000 - 500)/1000.0;
+
+		//move spawn position based on rotation
+		positions[i].x += windSpeed*50*sin(rotateBase_degrees*M_PI/180);
+		positions[i].z += windSpeed*50*cos(rotateBase_degrees*M_PI/180);
 	} else{
-		positions[i].y = positions[i].y - fallSpeed;
+		positions[i].y = positions[i].y - fallSpeed*(2*windSpeed + 1);
 	}
 
+	//add randomness
 	positions[i].x += (rand() % 100 - 50)/10000.0;
 	positions[i].z += (rand() % 100 - 50)/10000.0;
 
+	//add wind
+	positions[i].x += -windSpeed/2 * sin(rotateBase_degrees*M_PI/180);
+	positions[i].z += -windSpeed/2 * cos(rotateBase_degrees*M_PI/180);
   }
-
-
 	////////////////////////////////////////////
 	//				END SNOW Updates
 	////////////////////////////////////////////
@@ -423,7 +626,7 @@ static void display(void)
     DrawNormalObjects(rotation);
 
     //glDisable(GL_LIGHTING);
-    glColor3d(0.1,0.1,0.4);
+    glColor3d(1,1,1);
 
     text_onScreen(0, 3, "Prof. Adriano Cavalcanti / A385 Computer Graphics / UAA");
     text_onScreen(2, 3, "- look up or down: A / Z");
@@ -461,7 +664,14 @@ void move_camera(int specialKEY,char normalKEY)
 		//move camera down
 		case 'w':
 		case 'W': g_elevation -=2.0; break;
-		
+	    case 'l': rotateBase_degrees++; break;
+		case 'L': rotateBase_degrees++; break;
+		case 'r': rotateBase_degrees--; break;
+		case 'R': rotateBase_degrees--; break;
+		case '1': windSpeed = .25f; break;
+		case '2': windSpeed = .5f; break;
+		case '3': windSpeed = .75; break;
+		case '0': windSpeed = 0.f; break;
 
         default:
         {    break;
@@ -606,7 +816,22 @@ void init_dados(void)
 	p.z += (rand() % 1000 - 500)/1000.0;
  
     positions.push_back(p);        
-	cout << "point " << i << ": " << p.x << "," << p.y << "," << p.z << endl;
+
+  }
+
+  //create vector of random points
+  for(int i = 0; i < numTrees; i++){
+	p.x = 0;
+	p.y = 0;
+	p.z = 0;
+	while(sqrt(p.x*p.x + p.z*p.z) <25){
+		p.x = (rand() % MaxWidth) -(MaxWidth/2);
+		p.z = (rand() % MaxWidth) -(MaxWidth/2);
+		p.x += (rand() % 1000 - 500)/1000.0;
+		p.z += (rand() % 1000 - 500)/1000.0;
+	 	}
+    TreePos.push_back(p);        
+
   }
 
 }
@@ -641,7 +866,7 @@ int main(int argc, char *argv[])
     glutIdleFunc(idle);
 
     // environment background color
-    glClearColor(0.9,0.9,0.7,1);//(1,1,1,1);
+    glClearColor(0,0,0,1);//(1,1,1,1);
     // deepth efect to objects
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);

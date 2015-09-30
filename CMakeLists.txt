@@ -6,8 +6,11 @@ find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 
 add_executable(Prog task2.cpp)
+add_executable(Prog2 cpp_withoutIncluders.cpp)
+
 
 include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} ${SDL_INCLUDE_DIR})
 target_link_libraries(Prog ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
+target_link_libraries(Prog2 ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
 
 set(EXECUTABLE_OUTPUT_PATH ../bin)
