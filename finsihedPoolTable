@@ -1,0 +1,983 @@
+// Windows Only
+#if defined _WIN32 || _WIN64
+#   include <windows.h>					// included in all Windows apps
+#   include <winuser.h>                 // Windows constants
+// for windows GL is in small letters
+#   include <gl/gl.h>						// OpenGL include
+#   include <gl/glu.h>
+#   include <GL/openglut.h>
+// for linux GL is in capital letters
+//=========================================================//
+//=========================================================//
+
+// LINUX or UNIX ONLY
+#elif __linux__
+#   include <GL/glut.h>
+#   include <GL/glu.h>
+#   include <GL/gl.h>
+//=========================================================//
+//=========================================================//
+
+// OS X Libraries
+
+#elif __APPLE__
+#   include <GLUT/glut.h>
+#   include <OPENGL/glu.h>
+#   include <OPENGL/gl.h>
+#endif
+//=========================================================//
+//=========================================================//
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <time.h>
+#include <math.h>
+#include <string>
+#include <sstream>
+#include <iostream>
+//=========================================================//
+//=========================================================//
+
+
+//using namespace std;
+
+//Global Variables
+const float PI = 3.141562653;
+GLdouble  g_playerPos[] = { 0, 3, 10.0 };//{ 0.0, 0.5, 10.0 };
+GLdouble  g_lookAt[] = { 0.0, 0.0, 0.0 };
+GLfloat   g_viewAngle = -90.0;
+GLfloat   g_elevationAngle = 0.0;
+GLfloat	  g_elevation = 4.0;
+GLfloat	  rotation = 0.0;
+float rad = 0;
+float DEFAULT_SPEED = 1.0f;
+float framePerSec = 60;
+const int   WORLD_SIZE = 250;
+//=========================================================//
+//=========================================================//
+GLvoid  DrawNormalObjects(GLfloat rotation);
+GLvoid  DrawWireframeObjects(GLfloat rotation);
+GLvoid  DrawFlatshadedObjects(GLfloat rotation);
+//=========================================================//
+//=========================================================//
+// quadric objects
+GLUquadricObj *g_normalObject     = NULL;
+GLUquadricObj *g_wireframeObject  = NULL;
+GLUquadricObj *g_flatshadedObject = NULL;
+
+//Housekeeping Functions
+void init_data(void);
+void setup_sceneEffects(void);
+void cleanUP_data(void);
+
+// OpenGL Callback Functions
+
+static void resize(int width, int height);
+static void display(void);
+static void keyboard(unsigned char key, int x, int y);
+static void special(int key, int x, int y);
+static void idle(void);
+
+//Forward Declared functions
+GLvoid output(float, float, std::string);
+GLvoid DrawLinesXYZ();
+GLvoid DrawCueLine();
+void move_camera(int specialKey,char normalKey);
+void update_camera();
+GLvoid DrawGround();
+GLvoid initBalls();
+GLvoid CheckCushionCollision();
+GLvoid CheckBallCollision();
+GLvoid UpdateCueBallPositions(int, float);
+GLvoid UpdateBalls();
+GLvoid DrawBalls();
+GLvoid DrawPoolTable();
+GLvoid cueBreak();
+
+//Pool Table Constants
+const float inch = 1/12.0;
+const float foot = 1;
+const GLfloat length = 9.0*foot;
+const GLfloat width = 4.5*foot; //Should be half the length.
+const GLfloat height = 1.5*foot;
+const GLfloat offset = 0.25;
+const GLfloat leg_radius = 0.2;
+const GLfloat hole_radius = 2.5*inch;
+const GLfloat ball_radius = 1.125*inch;
+const GLfloat numBalls = 16;
+const GLfloat friction = 0.00035;
+GLfloat force = 0.1;
+
+struct Ball{
+    //Positions
+    float x ,y ,z ;
+    //Velocities
+    float vx, vz;
+    bool isStriped;
+    bool isSolid;
+    bool isCueBall;
+    int number;
+    std::string color;
+    //float posVect[3];
+    
+    
+    Ball(){
+        x = 0, y = height+ball_radius, z = 0, vx = 0, vz = 0, isStriped = false, isSolid = false, number = 0;
+        
+    }
+    Ball(float x_, float y_, float z_):x(x_), y(y_), z(z_){}
+    
+    float vectorLength(){
+        return sqrtf((x*x)+(z*z));
+    }
+};
+
+Ball balls[16];
+
+GLvoid initBalls(){
+    //Balls laid out using the following references:
+    // -https://www.dynamicbilliard.ca/pool-table-layout
+    // -http://www.billiardsforum.info/pool-rules/8-ball-rules.asp
+    // - https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Eight_Ball_Rack_2005_SeanMcClean.jpg/400px-Eight_Ball_Rack_2005_SeanMcClean.jpg
+    
+    //Cue ball - Head Spot
+    balls[0].number = 0;
+    balls[0].color = "white";
+    balls[0].x = -width/2;
+    balls[0].z = 0;
+    balls[0].vx = 0;
+    balls[0].vz = 0;
+
+    
+    balls[1].number = 9;
+    balls[1].color = "yellow";
+    balls[1].isStriped = true;
+    balls[1].x = width/2;
+    balls[1].z = 0;
+    balls[1].vx = 0;
+    balls[1].vz = 0;
+    
+    balls[2].number = 7;
+    balls[2].color = "brown";
+    balls[2].isSolid = true;
+    balls[2].x = width/2+2*ball_radius*sin(PI/3);
+    balls[2].z = ball_radius;
+    balls[2].vx = 0;
+    balls[2].vz = 0;
+    
+    balls[3].number = 12;
+    balls[3].color = "purple";
+    balls[3].isStriped = true;
+    balls[3].x = width/2+2*ball_radius*sin(PI/3);
+    balls[3].z = -ball_radius;
+    balls[3].vx = 0;
+    balls[3].vz = 0;
+    
+    balls[4].number = 15;
+    balls[4].color = "brown";
+    balls[4].isStriped = true;
+    balls[4].x = width/2+4*ball_radius*sin(PI/3);
+    balls[4].z = 2*ball_radius;
+    balls[4].vx = 0;
+    balls[4].vz = 0;
+    
+    balls[5].number = 8;
+    balls[5].color = "black";
+    balls[5].isSolid = true;
+    balls[5].x = width/2+4*ball_radius*sin(PI/3);
+    balls[5].z = 0;
+    balls[5].vx = 0;
+    balls[5].vz = 0;
+    
+    balls[6].number = 1;
+    balls[6].color = "yellow";
+    balls[6].isSolid = true;
+    balls[6].x = width/2+4*ball_radius*sin(PI/3);
+    balls[6].z = -2*ball_radius;
+    balls[6].vx = 0;
+    balls[6].vz = 0;
+
+    
+    balls[7].number = 6;
+    balls[7].color = "green";
+    balls[7].isSolid = true;
+    balls[7].x = width/2+6*ball_radius*sin(PI/3);
+    balls[7].z = 3*ball_radius;
+    balls[7].vx = 0;
+    balls[7].vz = 0;
+    
+    balls[8].number = 10;
+    balls[8].color = "blue";
+    balls[8].isStriped = true;
+    balls[8].x = width/2+6*ball_radius*sin(PI/3);
+    balls[8].z = ball_radius;
+    balls[8].vx = 0;
+    balls[8].vz = 0;
+    
+    balls[9].number = 3;
+    balls[9].color = "red";
+    balls[9].isSolid = true;
+    balls[9].x = width/2+6*ball_radius*sin(PI/3);
+    balls[9].z = -ball_radius;
+    balls[9].vx = 0;
+    balls[9].vz = 0;
+    
+    balls[10].number = 14;
+    balls[10].color = "green";
+    balls[10].isStriped = true;
+    balls[10].x = width/2+6*ball_radius*sin(PI/3);
+    balls[10].z = -3*ball_radius;
+    balls[10].vx = 0;
+    balls[10].vz = 0;
+    
+    balls[11].number = 11;
+    balls[11].color = "red";
+    balls[11].isStriped = true;
+    balls[11].x = width/2+8*ball_radius*sin(PI/3);
+    balls[11].z = 4*ball_radius;
+    balls[11].vx = 0;
+    balls[11].vz = 0;
+    
+    balls[12].number = 2;
+    balls[12].color = "blue";
+    balls[12].isSolid = true;
+    balls[12].x = width/2+8*ball_radius*sin(PI/3);
+    balls[12].z = 2*ball_radius;
+    balls[12].vx = 0;
+    balls[12].vz = 0;
+    
+    balls[13].number = 13;
+    balls[13].color = "orange";
+    balls[13].isStriped = true;
+    balls[13].x = width/2+8*ball_radius*sin(PI/3);
+    balls[13].z = 0;
+    balls[13].vx = 0;
+    balls[13].vz = 0;
+    
+    balls[14].number = 4;
+    balls[14].color = "purple";
+    balls[14].isSolid = true;
+    balls[14].x = width/2+8*ball_radius*sin(PI/3);
+    balls[14].z = -2*ball_radius;
+    balls[14].vx = 0;
+    balls[14].vz = 0;
+    
+    balls[15].number = 5;
+    balls[15].color = "orange";
+    balls[15].isSolid = true;
+    balls[15].x = width/2+8*ball_radius*sin(PI/3);
+    balls[15].z = -4*ball_radius;
+    balls[15].vx = 0;
+    balls[15].vz = 0;
+}
+//=========================================================//
+//=========================================================//
+GLvoid output(float row, float col, std::string out)
+{
+    int len, i;
+    glRasterPos2d(col, row);
+    len = (int)out.length();
+    for (i = 0; i < len; i++)
+    {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, out[i]);
+    }
+}
+//=========================================================//
+//=========================================================//
+GLvoid DrawLinesXYZ()
+{
+    glEnable(GL_BLEND);
+    glPushMatrix();
+    
+    glBegin(GL_LINES);
+    glLineWidth(1.5);
+    glColor3f(1.0, 0, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3f(2.5, 0, 0);
+    
+    glColor3f(0, 1, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3f(0, 2.5, 0);
+    
+    glColor3f(0, 0, 1);
+    glVertex3f(0, 0, 0);
+    glVertex3f(0, 0, 2.5);
+    
+    glEnd();
+    glPopMatrix();
+    glDisable(GL_BLEND);
+}
+//=========================================================//
+//=========================================================//
+void move_camera(int specialKEY, char normalKEY)
+{
+    
+    // keyboard :: normal keys
+    switch (normalKEY)
+    {
+        case 'P' : case 'p':
+            rotation +=1.0;
+            break;
+        case 'O': case 'o':
+            rotation -=1.0;
+            break;
+//        case '0':
+//            break;
+        case '1':
+            force = .06;
+            break;
+        case '2':
+            force = .075;
+            break;
+        case '3':
+            force = .1;
+            break;
+        case 'i':case 'I':
+            UpdateCueBallPositions(1, 1*inch);
+            break;
+        case 'l':case 'L':
+            UpdateCueBallPositions(2, 1*inch);
+            break;
+        case 'k':case 'K':
+            UpdateCueBallPositions(3, 1*inch);
+            break;
+        case 'j':case 'J':
+            UpdateCueBallPositions(4, 1*inch);
+            break;
+        case 'b' : case 'B':
+            cueBreak();
+            break;
+        case 'E': case 'e':
+            initBalls();
+            rotation = 0;
+            force = .1;
+        default:
+        {
+            break;
+        }
+    }
+    
+    // keyboard :: normal keys
+    switch (normalKEY)
+    {   // looking up
+        case 'A': case 'a':
+            g_elevationAngle += 2.0; break;
+            
+            // looking down
+        case 'Z':case 'z':
+            g_elevationAngle -= 2.0;  break;
+         case 'q': case 'Q':
+            g_playerPos[1] -= 0.25; break;
+        case 'w': case 'W':
+            g_playerPos[1]  += 0.25; break;
+        default:
+        {
+            break;
+        }
+    }
+    
+    // special :: special keys
+    switch (specialKEY)
+    {   // camera setup
+            // check if it is moving the view to look left
+        case GLUT_KEY_LEFT:
+        {
+            g_viewAngle -= 4.0;
+            // calculate camera rotation angle radians
+            rad = float(3.14159 * g_viewAngle / 180.0f);
+            break;
+        }
+            // check if it is moving the view to look right
+        case GLUT_KEY_RIGHT:
+        {
+            g_viewAngle += 4.0;
+            // calculate camera rotation angle radians
+            rad = float(3.14159 * g_viewAngle / 180.0f);
+            break;
+        }
+            // pressing keys Up/Down, update coordinates "x" and "z"
+            // based on speed and angle of view.
+        case GLUT_KEY_UP:
+        {
+            g_playerPos[2] += sin(rad) * DEFAULT_SPEED;
+            g_playerPos[0] += cos(rad) * DEFAULT_SPEED;
+            break;
+        }
+        case GLUT_KEY_DOWN:
+        {
+            g_playerPos[2] -= sin(rad) * DEFAULT_SPEED;
+            g_playerPos[0] -= cos(rad) * DEFAULT_SPEED;
+            break;
+        }
+        default:
+        {   break;
+        }
+    }
+}
+//=========================================================//
+//=========================================================//
+void update_camera()
+{
+    // don't allow the player to wander past the "edge of the world"
+    if (g_playerPos[0] < -(WORLD_SIZE - 50))
+        g_playerPos[0] = -(WORLD_SIZE - 50);
+    if (g_playerPos[0] > (WORLD_SIZE - 50))
+        g_playerPos[0] = (WORLD_SIZE - 50);
+    if (g_playerPos[2] < -(WORLD_SIZE - 50))
+        g_playerPos[2] = -(WORLD_SIZE - 50);
+    if (g_playerPos[2] > (WORLD_SIZE - 50))
+        g_playerPos[2] = (WORLD_SIZE - 50);
+    
+    // calculate the player's angle of rotation in radians
+    float rad = float(3.14159 * g_viewAngle / 180.0f);
+    // use the players view angle to correctly set up the view matrix
+    g_lookAt[0] = float(g_playerPos[0] + 100 * cos(rad));
+    g_lookAt[2] = float(g_playerPos[2] + 100 * sin(rad));
+    
+    rad = float(3.13149 * g_elevationAngle / 180.0f);
+    
+    g_lookAt[1] = float(g_playerPos[1] + 100 * sin(rad));
+    
+    // clear the modelview matrix
+    glLoadIdentity();
+    
+    // setup the view matrix
+    gluLookAt(g_playerPos[0], g_playerPos[1], g_playerPos[2],
+              g_lookAt[0], g_lookAt[1], g_lookAt[2],
+              0.0, 1.0, 0.0);
+}
+
+//=========================================================//
+//=========================================================//
+GLvoid DrawGround()
+{
+    // enable blending for anti-aliased lines
+    glEnable(GL_BLEND);
+    
+    // set the color to a bright blue
+    glColor3f(0.5f, 0.7f, 1.0f);
+    
+    // draw the lines
+    glBegin(GL_LINES);
+    for (int x = -WORLD_SIZE; x < WORLD_SIZE; x += 6)
+    {
+        glVertex3i(x, 0, -WORLD_SIZE);
+        glVertex3i(x, 0, WORLD_SIZE);
+    }
+    // set the color to a bright red
+    glColor3f(1.0f, 0.7f, 0.5f);
+    
+    for (int z = -WORLD_SIZE; z < WORLD_SIZE; z += 6)
+    {
+        glVertex3i(-WORLD_SIZE, 0, z);
+        glVertex3i(WORLD_SIZE, 0, z);
+    }
+    glEnd();
+    
+    // turn blending off
+    glDisable(GL_BLEND);
+}
+//=========================================================//
+//=========================================================//
+GLvoid cueBreak() {
+    if (rotation > 360.0)
+        rotation = 0.0;
+    rad = PI*rotation/180;
+    balls[0].vx = force*cosf(rad);
+    balls[0].vz = force*sinf(rad);
+}
+
+GLvoid DrawCueLine(){
+    if (rotation > 360.0)
+        rotation = 0.0;
+    rad = PI*rotation/180;
+glEnable(GL_BLEND);
+glPushMatrix();
+
+glBegin(GL_LINES);
+glLineWidth(2);
+glColor3f(0, 0, 0);
+glVertex3f(balls[0].x, balls[0].y, balls[0].z);
+glVertex3f(balls[0].x+1*cosf(rad),balls[0].y, balls[0].z+1*sinf(rad));
+    glPopMatrix();
+    glEnd();
+}
+//=========================================================//
+//=========================================================//
+GLvoid CheckCushionCollision()
+{
+//    static float headCushion = -length/2;
+//    static float footCustion = length/2;
+//    static float topCushion = -width/2;
+//    static float bottomCushion = width/2;
+    static float shortCushion = length/2;
+    static float longCushion = width/2;
+    
+    for (int i = 0; i < numBalls; ++i) {
+        //Check for collision with short cushions (left/right).
+        if ((balls[i].x >= shortCushion-ball_radius) || (balls[i].x+ball_radius <= -(shortCushion-ball_radius)))
+        {
+            balls[i].vx = -balls[i].vx;
+        }
+        //Check collision with long cusions (top/bottom).
+        else if ((balls[i].z >= longCushion-ball_radius) || (balls[i].z <= -(longCushion-ball_radius)))
+        {
+            balls[i].vz = -balls[i].vz;
+        }
+    }
+}
+//=========================================================//
+//=========================================================//
+GLvoid CheckBallCollision()
+{
+    float diff_x;
+    float diff_z;
+    static float sumRadius = 2*ball_radius;
+    for (int i = 0; i < numBalls; ++i) {
+        for (int j = 0; j < numBalls; ++j) {
+            if (j != i) {
+                
+                diff_x = balls[i].x - balls[j].x;
+                diff_z = balls[i].z -balls[j].z;
+                if((diff_x*diff_x + diff_z*diff_z) <= (sumRadius*sumRadius))
+                {
+                    //collision detected
+                    float diff_length = sqrtf((diff_x*diff_x) + (diff_z*diff_z));
+                    if (diff_length == 0) {
+                        diff_length = 1;
+                    }
+                    float norm_x = diff_x/diff_length;
+                    float norm_z = diff_z/diff_length;
+                    float newSpeed1 = (balls[i].vx*norm_x)+(balls[i].vz*norm_x);
+                    float newSpeed2 = (balls[j].vx*norm_z)+(balls[j].vz*norm_z);
+                    float newSpeedDiff = newSpeed1 - newSpeed2;
+                    balls[i].vx = balls[i].vx - newSpeedDiff*norm_x;
+                    balls[i].vz = balls[i].vz - newSpeedDiff*norm_z;
+                    balls[j].vx = balls[j].vx + newSpeedDiff*norm_x;
+                    balls[j].vz = balls[j].vz + newSpeedDiff*norm_z;
+                }
+            }
+        }
+    }
+}
+//=========================================================//
+//=========================================================//
+GLvoid UpdateCueBallPositions(int direction, float amount)
+{
+    //1:up, 2:right, 3:down, 4:left
+    if (direction == 1) {
+        balls[0].z -=amount;
+    }else if(direction == 2)
+    {
+        balls[0].x += amount;
+    }else if(direction == 3)
+    {
+        balls[0].z += amount;
+    }else if(direction == 4)
+    {
+        balls[0].x -= amount;
+    }
+
+}
+//=========================================================//
+//=========================================================//
+GLvoid UpdateBalls()
+{
+    static bool isInitialized = false;
+    if(!isInitialized){
+        initBalls();
+        isInitialized = true;
+    }
+    
+    static float timeBetweenFrame = 1/framePerSec;
+    static clock_t last_time = clock();
+    clock_t current_time = clock();
+    
+    //timeBetweenFrame
+    //if ((float)(current_time - last_time)/CLOCKS_PER_SEC > .0001) {
+//        //Update positions then check for collisions.
+//        for (int i = 0; i < numBalls; ++i) {
+//            //Move balls based on how long
+//            balls[i].x += balls[i].vx*timeBetweenFrame;
+//            balls[i].z += balls[i].vz*timeBetweenFrame;
+//        }
+//        CheckCushionCollision();
+//        CheckBallCollision();
+//        DrawBalls();
+//        last_time = current_time;
+        //last_time = current_time;
+         for (int i = 0; i < numBalls; ++i) {
+            //Move balls based on how long
+             if (balls[i].vx > 0) {
+                 balls[i].x += balls[i].vx;
+                 balls[i].vx -= friction;
+                 if (balls[i].vx < 0) {
+                     balls[i].vx = 0;
+                 }
+             }else if(balls[i].vx < 0){
+                 balls[i].x += balls[i].vx;
+                 balls[i].vx += friction;
+                 if (balls[i].vx > 0) {
+                     balls[i].vx = 0;
+                 }
+             }
+             if (balls[i].vz > 0) {
+                 balls[i].z += balls[i].vz;
+                 balls[i].vz -= friction;
+                 if (balls[i].vz < 0) {
+                     balls[i].vz = 0;
+                 }
+             }else if(balls[i].vz < 0){
+                 balls[i].z += balls[i].vz;
+                 balls[i].vz += friction;
+                 if (balls[i].vz > 0) {
+                     balls[i].vz = 0;
+                 }
+             }
+         }
+    //for (int i = 0; i < numBalls; ++i) {
+        CheckCushionCollision();
+        CheckBallCollision();
+    //}
+    
+        DrawBalls();
+        
+    
+    
+}
+GLvoid DrawBalls()
+{
+    for (int i = 0; i < numBalls; ++i) {
+        glPushMatrix();
+        glTranslatef(balls[i].x, balls[i].y, balls[i].z);
+        if (balls[i].isSolid && (balls[i].number != 0)) {
+            glColor3f(1, 0, 0);
+        } else if(balls[i].isStriped) {
+            glColor3f(0, 0, 1);
+        } else{
+            glColor3f(1, 1, 1);
+        }
+        gluSphere(g_normalObject, ball_radius, 32, 32);
+        glPopMatrix();
+    }
+}
+//=========================================================//
+//=========================================================//
+GLvoid DrawPoolTable()
+{
+    
+    //Colors scaled from standard hex values. (#FFFFFF)
+    GLfloat fabric_color[] = {36.0/255, 85.0/255, 21.0/255};
+    GLfloat wood_color[] = {87.0/255, 52.0/255, 10.0/255};
+    //Array of all vertices of wood siding for pool table.
+    GLfloat wood_siding_vertices[] = {-length/2, height, width/2,
+                               -length/2, height - offset, width/2,
+                                length/2, height - offset, width/2,
+                                length/2, height, width/2,
+                                length/2, height, -width/2,
+                                length/2, height - offset, -width/2,
+                                -length/2, height, -width/2,
+                                -length/2, height - offset, -width/2};
+    //Array of indices that point to vertices, each quad/rectangular shape takes 4 vertices.
+    GLuint wood_siding_indices[] = {0,1,2,3,
+                                    3,2,5,4,
+                                    4,5,7,6,
+                                    6,7,1,0};
+    //Array of indices that index to the 4 corners of the pool bed.
+    GLuint pool_bed_indices[] = {6,0,3,4};
+    
+//    //Draw pool bed felt.
+//    glBegin(GL_QUADS);
+//    //Color of bed felt
+//    glColor3fv(fabric_color);
+//    //Draw rectangular plane for pool bed.
+//    glVertex3f(-length/2, height, -width/2);
+//    glVertex3f(-length/2, height, width/2);
+//    glVertex3f(length/2, height, width/2);
+//    glVertex3f(length/2, height, -width/2);
+//    glEnd();
+//
+//    glBegin(GL_QUADS);
+//    //Draw wood siding.
+//    glColor3fv(wood_color);
+//    glVertex3f(-length/2, height, width/2);
+//    glVertex3f(-length/2, height - .25, width/2);
+//    glVertex3f( length/2, height - .25, width/2);
+//    glVertex3f( length/2, height, width/2);
+//    glVertex3f( length/2, height, width/2);
+//    glEnd();
+    
+    glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_BLEND);
+    //glColorMaterial ( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE ) ;
+    //Allow use of vertex arrays
+    glEnableClientState(GL_VERTEX_ARRAY);
+    //Color of bed felt
+    glColor3fv(fabric_color);
+    //Use the wood siding vertices to draw the pool bed.
+    glVertexPointer(3, GL_FLOAT, 0, wood_siding_vertices);
+    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, pool_bed_indices);
+    
+    //Draw all 4 faces of the wood siding using vertice array and indice array
+    glColor3fv(wood_color);
+    glVertexPointer(3, GL_FLOAT, 0, wood_siding_vertices);
+    glDrawElements(GL_QUADS, 16, GL_UNSIGNED_INT, wood_siding_indices);
+    
+    glDisableClientState(GL_VERTEX_ARRAY);
+    //Draws 4 wood legs
+    glPushMatrix();
+    glTranslatef(length/2-(2*leg_radius), height-offset, -(width/2-(2*leg_radius)));
+    glRotatef(90, 1, 0, 0);
+    gluCylinder(g_normalObject, leg_radius, leg_radius, height-offset, 12, 10);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(length/2-(2*leg_radius), height-offset, width/2-(2*leg_radius));
+    glRotatef(90, 1, 0, 0);
+    gluCylinder(g_normalObject, leg_radius, leg_radius, height-offset, 12, 10);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(-(length/2-(2*leg_radius)), height-offset, width/2-(2*leg_radius));
+    glRotatef(90, 1, 0, 0);
+    gluCylinder(g_normalObject, leg_radius, leg_radius, height-offset, 12, 10);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(-(length/2-(2*leg_radius)), height-offset, -(width/2-(2*leg_radius)));
+    glRotatef(90, 1, 0, 0);
+    gluCylinder(g_normalObject, leg_radius, leg_radius, height-offset, 12, 10);
+    glPopMatrix();
+    
+    //Draws 4 pockets
+    glPushMatrix();
+    glTranslatef(length/2, height-offset, -(width/2));
+    glRotatef(90, 1, 0, 0);
+    //gluCylinder(g_normalObject, hole_radius, hole_radius, height/4, 12, 10);
+        glPushMatrix();
+        glColor3f(0, 0, 0);
+        glTranslatef(0, 0, -(offset+.001));
+        gluPartialDisk(g_normalObject,0,hole_radius,12,10,270,90);
+        glPopMatrix();
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(length/2, height-offset, width/2);
+    glRotatef(90, 1, 0, 0);
+    //gluCylinder(g_normalObject, leg_radius, leg_radius, height/4, 12, 10);
+        glPushMatrix();
+        glColor3f(0, 0, 0);
+        glTranslatef(0, 0, -(offset+.001));
+        gluPartialDisk(g_normalObject,0,hole_radius,12,10,180,90);
+        glPopMatrix();
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(-(length/2), height-offset, width/2);
+    glRotatef(90, 1, 0, 0);
+    //gluCylinder(g_normalObject, leg_radius, leg_radius, height/4, 12, 10);
+        glPushMatrix();
+        glColor3f(0, 0, 0);
+        glTranslatef(0, 0, -(offset+.001));
+        gluPartialDisk(g_normalObject,0,hole_radius,12,10,90,90);
+        glPopMatrix();
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(-(length/2), height-offset, -(width/2));
+    glRotatef(90, 1, 0, 0);
+    //gluCylinder(g_normalObject, leg_radius, leg_radius, height/4, 12, 10);
+        glPushMatrix();
+        glColor3f(0, 0, 0);
+        glTranslatef(0, 0, -(offset+.001));
+        gluPartialDisk(g_normalObject,0,hole_radius,12,10,0,90);
+        glPopMatrix();
+    glPopMatrix();
+    //Draw 2 center pockets.
+    glPushMatrix();
+    glTranslatef(0, height+.001, -(width/2));
+    glRotatef(90, 1, 0, 0);
+    gluPartialDisk(g_normalObject,0,hole_radius,12,10,270,180);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(0, height+.001, (width/2));
+    glRotatef(90, 1, 0, 0);
+    gluPartialDisk(g_normalObject,0,hole_radius,12,10,90,180);
+    glPopMatrix();
+    
+    glDisable(GL_BLEND);
+}
+//=========================================================//
+//=========================================================//
+static void resize(int width, int height)
+{
+    const float ar = (float)width / (float)height;
+    
+    glViewport(0, 0, width, height);
+    
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    if (ar > .5)
+        glFrustum(-ar, ar, -1.0, 1.0, 2.0, 100.0);
+    else
+        glFrustum(-1.0, 1.0, -1 / ar, 1 / ar, 2.0, 100.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+//=========================================================//
+//=========================================================//
+static void display(void)
+{
+    update_camera();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    glEnable(GL_LIGHTING);
+    
+    // position the light
+    GLfloat pos[4] = { 5.0, 5.0, 5.0, 0.0 };
+    glLightfv(GL_LIGHT0, GL_POSITION, pos);
+    // rotation is used for animation
+    static GLfloat rotation = 0.0;
+    // it's increased by one every frame
+    //rotation += 0.1*horseSpeed;
+    // and ranges between 0 and 360
+//    if (rotation > 360.0)
+//        rotation = 0.0;
+    
+    
+    //glDisable(GL_LIGHTING);
+    glColor3d(0.1, 0.1, 0.4);
+    
+    output(7.5, -6, "Mignon Kramp / A385 Computer Graphics");
+    output(7.0, -6, "- LR move leftright");
+    output(6.5, -6, "- look up or down: A / Z");
+    output(6.0, -6, "- look right/left: arrows ->/<-");
+    output(5.5, -6, "- walk forward/backward: arrows UP/Down");
+    output(5.0, -6, "- move cue ball: j/k/l/i");
+    output(4.5, -6, "- shoot cue ball: b");
+    output(4.0, -6, "- rotate cue ball: o/p");
+    output(3.5, -6, "- change speed: 1/2/3");
+    output(3.0, -6, "- Reset table: e");
+//    output(2.5, -6, "Angle: " + std::to_string(horse.angle));
+    // output(2.0, -6, "Position: " + std::to_string(horse.x) + ", " + std::to_string(horse.y) +", "+  std::to_string(horse.z));
+    
+    DrawGround();
+    DrawPoolTable();
+    UpdateBalls();
+  //  DrawCueArrow();
+    //DrawLinesXYZ();
+    DrawCueLine();
+    DrawPoolTable();
+    glutSwapBuffers();
+}
+//=========================================================//
+//=========================================================//
+static void keyboard(unsigned char key, int x, int y)
+{
+    int number = -1;
+    
+    move_camera(number, key);
+    
+    glutPostRedisplay();
+}
+//=========================================================//
+//=========================================================//
+static void special(int key, int x, int y)
+{
+    char letter = ' ';
+    
+    move_camera(key, letter);
+    
+    glutPostRedisplay();
+}
+//=========================================================//
+//=========================================================//
+static void idle(void)
+{
+    glutPostRedisplay();
+}
+void setup_sceneEffects(void)
+{
+    // enable lighting
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    
+    // enable using glColor to change material properties
+    // we'll use the default glColorMaterial setting (ambient and diffuse)
+    glEnable(GL_COLOR_MATERIAL);
+    
+    // set the default blending function
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // set up the fog parameters for reflections
+    glFogi(GL_FOG_MODE, GL_LINEAR);
+    glFogf(GL_FOG_START, -100.0);
+    glFogf(GL_FOG_END, 100.0);
+    
+    // enable line anti-aliasing and make the lines slightly bigger than default
+    glEnable(GL_LINE_SMOOTH);
+    glLineWidth(1.5f);
+}
+//=========================================================//
+//=========================================================//
+void init_data(void)
+{
+    setup_sceneEffects();
+    // create a normal quadric (uses default settings)
+    g_normalObject = gluNewQuadric();
+    
+    g_wireframeObject = gluNewQuadric();
+    gluQuadricDrawStyle(g_wireframeObject, GLU_LINE);
+    
+    // create an object that uses flat shading
+    g_flatshadedObject = gluNewQuadric();
+    gluQuadricNormals(g_flatshadedObject, GLU_FLAT);
+    
+}
+//=========================================================//
+//=========================================================//
+void cleanUP_data(void)
+{  // delete all quadratic objects
+    if (g_normalObject)
+        gluDeleteQuadric(g_normalObject);
+    if (g_wireframeObject)
+        gluDeleteQuadric(g_wireframeObject);
+    if (g_flatshadedObject)
+        gluDeleteQuadric(g_flatshadedObject);
+}
+//=========================================================//
+//=========================================================//
+int main(int argc, char *argv[])
+{
+    glutInitWindowSize(640, 480);
+    glutInitWindowPosition(40, 40);
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+    
+    glutCreateWindow("A385 Computer Graphics");
+    
+    init_data();
+    
+    glutReshapeFunc(resize);
+    glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+    glutSpecialFunc(special);
+    glutIdleFunc(idle);
+    
+    // environment background color
+    glClearColor(0.9, 0.9, 0.7, 1);//(1,1,1,1);
+    // deepth efect to objects
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    // light and material in the environment
+    glEnable(GL_LIGHT0);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_COLOR_MATERIAL);
+    
+    glutMainLoop();
+    cleanUP_data();
+    
+    return EXIT_SUCCESS;
+}
